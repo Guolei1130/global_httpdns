@@ -97,10 +97,12 @@ static int new_android_getaddrinfofornet(const char *hostname, const char *servn
 }
 
 extern "C" int hook_libjavacore() {
-    xhook_register("/system/lib/libjavacore.so", "android_getaddrinfofornet",
-                   (void *) new_android_getaddrinfofornet, reinterpret_cast<void **>(&fp));
-    xhook_refresh(1);
+//    xhook_register("/system/app/WebviewGoogle/lib/arm/libwebviewchromium.so", "android_getaddrinfofornet",
+//                   (void *) new_android_getaddrinfofornet, reinterpret_cast<void **>(&fp));
+    xhook_register(".*\\.so$", "android_getaddrinfofornet",
+                   (void *)new_android_getaddrinfofornet, reinterpret_cast<void **>(&fp));
     xhook_enable_debug(1);
+    xhook_refresh(1);
     return 0;
 }
 
