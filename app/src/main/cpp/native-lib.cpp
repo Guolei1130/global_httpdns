@@ -171,6 +171,7 @@ extern "C" int test_cplusplus() {
 int new_getaddrinfo(const char *hostname, const char *servname,
     const struct addinfo *hints, struct addrinfo **res) {
   log_error("hahahha,wo hook dao l ");
+
   return 0;
 }
 
@@ -178,6 +179,11 @@ static int new_android_getaddrinfofornet(const char *hostname, const char *servn
                           const struct addrinfo *hints, unsigned netid, unsigned mark, struct addrinfo **res)
 {
   log_error("hahahha,wo hook dao l ->android_getaddrinfofornet ");
+  if (hints->ai_flags==AI_NUMERICHOST) {
+    log_error("ip");
+  } else{
+    log_error("host");
+  }
   return 0;
 }
 
@@ -186,17 +192,20 @@ extern "C" int test_libc() {
   return 0;
 }
 
+
 extern "C" int hook_libc(){
-#ifdef __arm__
-  xhook_register("/system/lib/libc.so",  "getaddrinfo", (void *)new_getaddrinfo,  NULL);
+//#ifdef __arm__
+  xhook_register("^/system/.*\\.so$",  "android_getaddrinfofornet", (void *)new_android_getaddrinfofornet,  NULL);
+  xhook_register("^/vendor/.*\\.so$",  "android_getaddrinfofornet", (void *)new_android_getaddrinfofornet,  NULL);
 //  xhook_register("/system/lib/libjavacore.so",  "android_getaddrinfofornet", (void *)new_android_getaddrinfofornet,  NULL);
-#elif defined(__aarch64__)
-  xhook_register("/system/lib64/libc.so",  "getaddrinfo", (void *)new_getaddrinfo,  NULL);
-//  xhook_register("/system/lib64/libjavacore.so",  "android_getaddrinfofornet", (void *)new_android_getaddrinfofornet,  NULL);
-#else
-#error "Arch unknown, please port me"
-#endif
+//#elif defined(__aarch64__)
+//  xhook_register("/system/lib64/libc.so",  "android_getaddrinfofornet", (void *)new_android_getaddrinfofornet,  NULL);
+////  xhook_register("/system/lib64/libjavacore.so",  "android_getaddrinfofornet", (void *)new_android_getaddrinfofornet,  NULL);
+//#else
+//#error "Arch unknown, please port me"
+//#endif
   xhook_refresh(1);
+  xhook_enable_debug(1);
   return 0;
 }
 

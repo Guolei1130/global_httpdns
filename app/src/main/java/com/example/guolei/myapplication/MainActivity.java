@@ -35,8 +35,13 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         try {
-                            Log.e("guolei", "run: "
-                                    + InetAddress.getAllByName("www.baidu.com")[0].toString());
+                            InetAddress[] addresses = InetAddress.getAllByName("www.baidu.com");
+                            if (addresses.length == 0) {
+
+                            }else {
+                                Log.e("guolei", "run: "
+                                         +addresses[0] .toString());
+                            }
                         } catch (UnknownHostException e) {
                             e.printStackTrace();
                         }
