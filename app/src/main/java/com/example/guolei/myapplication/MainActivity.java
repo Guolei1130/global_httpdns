@@ -36,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
         HttpDnsProvider.init(this);
         stringFromJNI();
         nativeInit();
+        inlineHook();
         // Example of a call to a native method
         Button tv = (Button) findViewById(R.id.sample_text);
         tv.setText("xxxxx");
@@ -128,4 +129,6 @@ public class MainActivity extends AppCompatActivity {
     public native String stringFromJNI();
 
     public native int nativeInit();
+
+    public native int inlineHook();
 }

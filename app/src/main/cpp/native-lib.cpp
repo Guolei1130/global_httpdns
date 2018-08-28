@@ -18,6 +18,8 @@
 #include <sys/stat.h>
 #include "xhook.h"
 
+#include "inlineHook.h"
+
 #define TAG_NAME        "xhook"
 #define log_error(fmt, args...) __android_log_print(ANDROID_LOG_ERROR, TAG_NAME, (const char *) fmt, ##args)
 
@@ -25,6 +27,8 @@
 static int (*fp)(const char *hostname, const char *servname,
                  const struct addrinfo *hints, unsigned netid, unsigned mark,
                  struct addrinfo **res);
+static int (*fp_getaddrinfo)(const char *hostname, const char *servname,
+                 const struct addrinfo *hints, struct addrinfo **res);
 
 static JavaVM *sjavaVM;
 
@@ -78,7 +82,7 @@ static int new_android_getaddrinfofornet(const char *hostname, const char *servn
     log_error(hostname, "");
     if (hints->ai_flags == AI_NUMERICHOST) {
         if (fp) {
-            fp(hostname, servname, hints, netid, mark, res);
+            return fp(hostname, servname, hints, netid, mark, res);
         }
     } else {
         const char *ip = getIpByHttpDns(hostname);
@@ -86,14 +90,37 @@ static int new_android_getaddrinfofornet(const char *hostname, const char *servn
             log_error("httpdns 解析成功，直接走IP");
             log_error("下面是ip");
             log_error(ip, "");
-            fp(ip, servname, hints, netid, mark, res);
+            return fp(ip, servname, hints, netid, mark, res);
         } else {
-            fp(hostname, servname, hints, netid, mark, res);
+            return fp(hostname, servname, hints, netid, mark, res);
         }
 
     }
 
     return 0;
+}
+
+static int new_getaddrinfo(const char *hostname, const char *servname,
+            const struct addrinfo *hints, struct addrinfo **res) {
+    log_error("hahahha,wo hook dao l ->getaddrinfo ");
+    log_error("下面是hostname");
+    log_error(hostname, "");
+    if (hints->ai_flags == AI_NUMERICHOST) {
+        if (fp) {
+            return fp_getaddrinfo(hostname, servname, hints, res);
+        }
+    } else {
+        const char *ip = getIpByHttpDns(hostname);
+        if (ip != NULL) {
+            log_error("httpdns 解析成功，直接走IP");
+            log_error("下面是ip");
+            log_error(ip, "");
+            return fp_getaddrinfo(ip, servname, hints,  res);
+        } else {
+            return fp_getaddrinfo(hostname, servname, hints, res);
+        }
+
+    }
 }
 
 extern "C" int hook_libjavacore() {
@@ -125,4 +152,19 @@ Java_com_example_guolei_myapplication_MainActivity_nativeInit(JNIEnv *env, jobje
     }
     hook_libjavacore();
     return 0;
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_example_guolei_myapplication_MainActivity_inlineHook(JNIEnv *env, jobject instance) {
+
+    if (registerInlineHook((uint32_t) getaddrinfo, (uint32_t) new_getaddrinfo, (uint32_t **) &fp_getaddrinfo) != ELE7EN_OK) {
+        return -1;
+    }
+    if (inlineHook((uint32_t) getaddrinfo) != ELE7EN_OK) {
+        return -1;
+    }
+    return 0;
+
+
 }
