@@ -14,7 +14,6 @@ add_library( # Sets the name of the library.
 
 target_link_libraries( # Specifies the target library.
                        native-lib
-                       test2
                        xhook
                         )
 
