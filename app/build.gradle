@@ -20,9 +20,23 @@ android {
 
     }
     buildTypes {
+        debug {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            externalNativeBuild {
+                cmake {
+                    cppFlags "-frtti -fexceptions -std=gnu++11 -DDEBUG"
+                }
+            }
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            externalNativeBuild {
+                cmake {
+                    cppFlags "-frtti -fexceptions -std=gnu++11 -DRELEASE"
+                }
+            }
         }
     }
     externalNativeBuild {

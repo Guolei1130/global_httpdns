@@ -20,10 +20,10 @@
 #include "AndHook.h"
 
 
-#define TAG_NAME        "xhook"
-#define log_error(fmt, args...) __android_log_print(ANDROID_LOG_ERROR, TAG_NAME, (const char *) fmt, ##args)
+#define TAG_NAME        "httpdns"
+#define LOGE(fmt, args...) __android_log_print(ANDROID_LOG_ERROR, TAG_NAME, (const char *) fmt, ##args)
 
-#define AKLog(...) __android_log_print(ANDROID_LOG_VERBOSE, __FUNCTION__, __VA_ARGS__)
+#define AKLog(...) __android_log_print(ANDROID_LOG_VERBOSE, TAG_NAME, __VA_ARGS__)
 #define AKHook(X)  AKHookFunction(reinterpret_cast<void *>(X), reinterpret_cast<void *>(my_##X), reinterpret_cast<void **>(&sys_##X))
 
 #define NETID_UNSET 0u
@@ -86,9 +86,9 @@ static const char *getIpByHttpDns(const char *hostname) {
 static int new_android_getaddrinfofornet(const char *hostname, const char *servname,
                                          const struct addrinfo *hints, unsigned netid,
                                          unsigned mark, struct addrinfo **res) {
-    log_error("hahahha,wo hook dao l ->android_getaddrinfofornet ");
-    log_error("下面是hostname");
-    log_error(hostname, "");
+    LOGE("hahahha,wo hook dao l ->android_getaddrinfofornet ");
+    LOGE("下面是hostname");
+    LOGE(hostname, "");
     if (hints->ai_flags == AI_NUMERICHOST) {
         if (fp) {
             return fp(hostname, servname, hints, netid, mark, res);
@@ -96,9 +96,9 @@ static int new_android_getaddrinfofornet(const char *hostname, const char *servn
     } else {
         const char *ip = getIpByHttpDns(hostname);
         if (ip != NULL) {
-            log_error("httpdns 解析成功，直接走IP");
-            log_error("下面是ip");
-            log_error(ip, "");
+            LOGE("httpdns 解析成功，直接走IP");
+            LOGE("下面是ip");
+            LOGE(ip, "");
             return fp(ip, servname, hints, netid, mark, res);
         } else {
             return fp(hostname, servname, hints, netid, mark, res);
@@ -111,9 +111,9 @@ static int new_android_getaddrinfofornet(const char *hostname, const char *servn
 
 static int new_getaddrinfo(const char *hostname, const char *servname,
                            const struct addrinfo *hints, struct addrinfo **res) {
-    log_error("hahahha,wo hook dao l ->getaddrinfo ");
-    log_error("下面是hostname");
-    log_error(hostname, "");
+    LOGE("hahahha,wo hook dao l ->getaddrinfo ");
+    LOGE("下面是hostname");
+    LOGE(hostname, "");
     if (hints->ai_flags == AI_NUMERICHOST) {
         if (fp) {
             return fp_getaddrinfo(hostname, servname, hints, res);
@@ -121,9 +121,11 @@ static int new_getaddrinfo(const char *hostname, const char *servname,
     } else {
         const char *ip = getIpByHttpDns(hostname);
         if (ip != NULL) {
-            log_error("httpdns 解析成功，直接走IP");
-            log_error("下面是ip");
-            log_error(ip, "");
+            LOGE("httpdns 解析成功，直接走IP");
+            LOGE("下面是ip");
+            LOGE(ip, "");
+            //这里就比较神奇了，传的是IP，但是ai_flags 不是ip，但是还正常,查看源码的时候，没发现在这个代码里面判断
+            // ai_flags 不numberhost还是其他
             return fp_getaddrinfo(ip, servname, hints, res);
         } else {
             return fp_getaddrinfo(hostname, servname, hints, res);
@@ -137,12 +139,22 @@ static int new_getaddrinfo(const char *hostname, const char *servname,
 //int android_getaddrinfoforiface(const char *hostname, const char *servname,
 //                           const struct addrinfo *hints, const char *iface, int mark, struct addrinfo **res)
 extern "C" int hook_android_getaddrinfofornet() {
-    xhook_register(".*\\.so$", "android_getaddrinfofornet",
+    if (fp) {
+        return 0;
+    }
+    int result = xhook_register(".*\\libjavacore.so$", "android_getaddrinfofornet",
                    (void *) new_android_getaddrinfofornet, reinterpret_cast<void **>(&fp));
-    xhook_enable_debug(1);
     xhook_refresh(1);
-    log_error("版本 21以上");
-    return 0;
+#if DEBUG
+    xhook_enable_sigsegv_protection(0);
+    xhook_enable_debug(1);
+    LOGE("built type debug");
+#elif RELEASE
+    xhook_enable_sigsegv_protection(1);
+    xhook_enable_debug(0);
+    LOGE("built type release");
+#endif
+    return result;
 }
 
 extern "C" JNIEXPORT jstring
@@ -151,7 +163,6 @@ Java_com_example_guolei_myapplication_MainActivity_stringFromJNI(
         JNIEnv *env,
         jobject /* this */) {
     std::string hello = "Hello from C++";
-
     return env->NewStringUTF(hello.c_str());
 }
 
@@ -207,7 +218,9 @@ Java_com_example_guolei_myapplication_MainActivity_nativeInit(JNIEnv *env, jobje
     if (initMethod(env) == -1) {
         return -1;
     }
-    hook_android_getaddrinfofornet();
-    hook_dns(env, instance);
-    return 0;
+    if (hook_android_getaddrinfofornet() != 0) {
+        xhook_clear();
+        return -1;
+    }
+    return hook_dns(env, instance);
 }

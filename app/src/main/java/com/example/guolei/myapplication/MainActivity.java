@@ -24,6 +24,8 @@ import andhook.lib.AndHook;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String TAG = "httpdns";
+
     // Used to load the 'native-lib' library on application startup.
     static {
         AndHook.ensureNativeLibraryLoaded(null);
@@ -37,10 +39,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         HttpDnsProvider.init(this);
-        stringFromJNI();
-        nativeInit();
+        Log.e(TAG, "onCreate: " + "native hook result-->" + (nativeInit() == 0));
         Button tv = (Button) findViewById(R.id.sample_text);
-        tv.setText("xxxxx");
+        tv.setText(stringFromJNI());
         tv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -48,11 +49,12 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         try {
-                            InetAddress[] addresses = InetAddress.getAllByName("s.vipkidstatic.com");
+                            InetAddress[] addresses = InetAddress.getAllByName("www.aliyun.com");
                             if (addresses == null || addresses.length == 0) {
 
                             } else {
-                                Log.e("xhook", "run: "
+                                Log.e(TAG, "run: " + addresses.length);
+                                Log.e(TAG, "run: "
                                         + addresses[0].toString());
                             }
                         } catch (UnknownHostException e) {
