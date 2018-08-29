@@ -133,6 +133,9 @@ static int new_getaddrinfo(const char *hostname, const char *servname,
     return 0;
 }
 
+// 5.0版本之前，android_getaddrinfofornet 叫android_getaddrinfoforiface
+//int android_getaddrinfoforiface(const char *hostname, const char *servname,
+//                           const struct addrinfo *hints, const char *iface, int mark, struct addrinfo **res)
 extern "C" int hook_android_getaddrinfofornet() {
     xhook_register(".*\\.so$", "android_getaddrinfofornet",
                    (void *) new_android_getaddrinfofornet, reinterpret_cast<void **>(&fp));
