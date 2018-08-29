@@ -20,10 +20,13 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import andhook.lib.AndHook;
+
 public class MainActivity extends AppCompatActivity {
 
     // Used to load the 'native-lib' library on application startup.
     static {
+        AndHook.ensureNativeLibraryLoaded(null);
         System.loadLibrary("xhook");
         System.loadLibrary("native-lib");
     }
@@ -36,8 +39,6 @@ public class MainActivity extends AppCompatActivity {
         HttpDnsProvider.init(this);
         stringFromJNI();
         nativeInit();
-        inlineHook();
-        // Example of a call to a native method
         Button tv = (Button) findViewById(R.id.sample_text);
         tv.setText("xxxxx");
         tv.setOnClickListener(new View.OnClickListener() {
@@ -93,14 +94,14 @@ public class MainActivity extends AppCompatActivity {
                         byte[] buffer = new byte[2048];
                         int len;
                         StringBuffer sb = new StringBuffer();
-                        File file = new File(getExternalCacheDir(),"log.txt");
+                        File file = new File(getExternalCacheDir(), "log.txt");
                         if (file.exists()) {
                             file.delete();
                         }
                         OutputStream outputStream = new FileOutputStream(file);
                         while ((len = is.read(buffer)) != -1) {
                             sb.append(new String(buffer, len));
-                            outputStream.write(buffer,0,len);
+                            outputStream.write(buffer, 0, len);
                             outputStream.flush();
                         }
                         TextView tv = findViewById(R.id.message);
@@ -109,7 +110,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
-                }finally {
+                } finally {
                     if (is != null) {
                         try {
                             is.close();
@@ -130,5 +131,5 @@ public class MainActivity extends AppCompatActivity {
 
     public native int nativeInit();
 
-    public native int inlineHook();
+
 }

@@ -17,18 +17,27 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include "xhook.h"
+#include "AndHook.h"
 
-#include "inlineHook.h"
 
 #define TAG_NAME        "xhook"
 #define log_error(fmt, args...) __android_log_print(ANDROID_LOG_ERROR, TAG_NAME, (const char *) fmt, ##args)
 
+#define AKLog(...) __android_log_print(ANDROID_LOG_VERBOSE, __FUNCTION__, __VA_ARGS__)
+#define AKHook(X)  AKHookFunction(reinterpret_cast<void *>(X), reinterpret_cast<void *>(my_##X), reinterpret_cast<void **>(&sys_##X))
+
+#define NETID_UNSET 0u
+/*
+ * MARK_UNSET represents the default (i.e. unset) value for a socket mark.
+ */
+#define MARK_UNSET 0u
 
 static int (*fp)(const char *hostname, const char *servname,
                  const struct addrinfo *hints, unsigned netid, unsigned mark,
                  struct addrinfo **res);
+
 static int (*fp_getaddrinfo)(const char *hostname, const char *servname,
-                 const struct addrinfo *hints, struct addrinfo **res);
+                             const struct addrinfo *hints, struct addrinfo **res);
 
 static JavaVM *sjavaVM;
 
@@ -101,7 +110,7 @@ static int new_android_getaddrinfofornet(const char *hostname, const char *servn
 }
 
 static int new_getaddrinfo(const char *hostname, const char *servname,
-            const struct addrinfo *hints, struct addrinfo **res) {
+                           const struct addrinfo *hints, struct addrinfo **res) {
     log_error("hahahha,wo hook dao l ->getaddrinfo ");
     log_error("下面是hostname");
     log_error(hostname, "");
@@ -115,21 +124,21 @@ static int new_getaddrinfo(const char *hostname, const char *servname,
             log_error("httpdns 解析成功，直接走IP");
             log_error("下面是ip");
             log_error(ip, "");
-            return fp_getaddrinfo(ip, servname, hints,  res);
+            return fp_getaddrinfo(ip, servname, hints, res);
         } else {
             return fp_getaddrinfo(hostname, servname, hints, res);
         }
 
     }
+    return 0;
 }
 
-extern "C" int hook_libjavacore() {
-//    xhook_register("/system/app/WebviewGoogle/lib/arm/libwebviewchromium.so", "android_getaddrinfofornet",
-//                   (void *) new_android_getaddrinfofornet, reinterpret_cast<void **>(&fp));
+extern "C" int hook_android_getaddrinfofornet() {
     xhook_register(".*\\.so$", "android_getaddrinfofornet",
-                   (void *)new_android_getaddrinfofornet, reinterpret_cast<void **>(&fp));
+                   (void *) new_android_getaddrinfofornet, reinterpret_cast<void **>(&fp));
     xhook_enable_debug(1);
     xhook_refresh(1);
+    log_error("版本 21以上");
     return 0;
 }
 
@@ -143,6 +152,51 @@ Java_com_example_guolei_myapplication_MainActivity_stringFromJNI(
     return env->NewStringUTF(hello.c_str());
 }
 
+
+static int
+(*sys_getaddrinfo)(const char *__node, const char *__service, const struct addrinfo *__hints,
+                   struct addrinfo **__result);
+
+static int my_getaddrinfo(const char *__node, const char *__service, const struct addrinfo *__hints,
+                          struct addrinfo **__result) {
+
+    // 这里有用xHook的时候，把所有的的android_getaddrinfofornet方法都替换为new_android_getaddrinfofornet,
+    // 因此我们这里直接调用 new_android_getaddrinfofornet就行
+    return new_android_getaddrinfofornet(__node, __service, __hints, NETID_UNSET, MARK_UNSET,
+                                         __result);
+}
+
+static int JNICALL hook_dns(JNIEnv *, jobject) {
+    static bool hooked = false;
+    int result = -1;
+
+    AKLog("starting native hook...");
+    if (!hooked) {
+        AKHook(getaddrinfo);
+
+        // typical use case
+        const void *libc = AKGetImageByName("libc.so");
+        if (libc != NULL) {
+            AKLog("base address of libc.so is %p", AKGetBaseAddress(libc));
+
+            void *p = AKFindSymbol(libc, "getaddrinfo");
+            if (p != NULL) {
+                AKHookFunction(p,                                        // hooked function
+                               reinterpret_cast<void *>(my_getaddrinfo),   // our function
+                               reinterpret_cast<void **>(&sys_getaddrinfo) // backup function pointer
+                );
+                AKLog("hook getaddrinfo success");
+                result = 0;
+            }
+            AKCloseImage(libc);
+        } //if
+
+        hooked = true;
+    } //if
+
+    return result;
+}
+
 extern "C"
 JNIEXPORT jint JNICALL
 Java_com_example_guolei_myapplication_MainActivity_nativeInit(JNIEnv *env, jobject instance) {
@@ -150,21 +204,7 @@ Java_com_example_guolei_myapplication_MainActivity_nativeInit(JNIEnv *env, jobje
     if (initMethod(env) == -1) {
         return -1;
     }
-    hook_libjavacore();
+    hook_android_getaddrinfofornet();
+    hook_dns(env, instance);
     return 0;
-}
-
-extern "C"
-JNIEXPORT jint JNICALL
-Java_com_example_guolei_myapplication_MainActivity_inlineHook(JNIEnv *env, jobject instance) {
-
-    if (registerInlineHook((uint32_t) getaddrinfo, (uint32_t) new_getaddrinfo, (uint32_t **) &fp_getaddrinfo) != ELE7EN_OK) {
-        return -1;
-    }
-    if (inlineHook((uint32_t) getaddrinfo) != ELE7EN_OK) {
-        return -1;
-    }
-    return 0;
-
-
 }
