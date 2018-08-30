@@ -17,12 +17,13 @@ public class HttpDnsProvider {
 
     private static volatile HttpDnsService sHttpDnsService;
 
-    public static HttpDnsService getHttpDnsService(){
+    public static HttpDnsService getHttpDnsService() {
         return sHttpDnsService;
     }
 
     public static void init(Context context) {
-        sHttpDnsService = HttpDns.getService(context, "145232");
+        sHttpDnsService = HttpDns.getService(context, "145232",
+                "a2d05dad155421cc8fb1d9d78408c1b8");
 
         DegradationFilter degradationFilter = new DegradationFilter() {
             @Override
@@ -57,6 +58,7 @@ public class HttpDnsProvider {
 
 
     private static volatile boolean mHooked;
+
     public static void globalReplaceByHookOs() {
         if (mHooked) {
             return;

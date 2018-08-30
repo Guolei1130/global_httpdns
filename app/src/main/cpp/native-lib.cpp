@@ -258,9 +258,9 @@ Java_com_example_guolei_myapplication_MainActivity_nativeInit(JNIEnv *env, jobje
     if (initMethod(env) == -1) {
         return -1;
     }
-    if (version >= 27) {
-        return -1;
-    }
+//    if (version >= 27) {
+//        return -1;
+//    }
     if (version >= 21) {
         return hookForL(env, instance);
     } else if (version >= 19) {
