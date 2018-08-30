@@ -29,9 +29,9 @@ public class MainActivity extends AppCompatActivity {
 
     // Used to load the 'native-lib' library on application startup.
     static {
-        AndHook.ensureNativeLibraryLoaded(null);
-        System.loadLibrary("xhook");
-        System.loadLibrary("native-lib");
+//        AndHook.ensureNativeLibraryLoaded(null);
+//        System.loadLibrary("xhook");
+//        System.loadLibrary("native-lib");
     }
 
     @Override
@@ -39,10 +39,9 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        HttpDnsProvider.init(this);
-        Log.e(TAG, "onCreate: " + "native hook result-->" + (nativeInit(Build.VERSION.SDK_INT) == 0));
-        Button tv = (Button) findViewById(R.id.sample_text);
-        tv.setText(stringFromJNI());
+//        Log.e(TAG, "onCreate: " + "native hook result-->" + (nativeInit(Build.VERSION.SDK_INT) == 0));
+        Button tv = findViewById(R.id.sample_text);
+//        tv.setText(stringFromJNI());
         tv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {

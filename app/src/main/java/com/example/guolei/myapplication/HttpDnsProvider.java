@@ -21,23 +21,27 @@ public class HttpDnsProvider {
         return sHttpDnsService;
     }
 
-    public static void init(Context context) {
+    public static void init(final Context context) {
+        if (sHttpDnsService != null) {
+            return;
+        }
+
         sHttpDnsService = HttpDns.getService(context, "145232",
                 "a2d05dad155421cc8fb1d9d78408c1b8");
-
-        DegradationFilter degradationFilter = new DegradationFilter() {
+        sHttpDnsService.setDegradationFilter(new DegradationFilter() {
             @Override
             public boolean shouldDegradeHttpDNS(String s) {
-                return detectIfProxyExist(null);
+                return HttpDnsProvider.detectIfProxyExist(context);
             }
-        };
-        //
-        sHttpDnsService.setDegradationFilter(degradationFilter);
+        });
+        sHttpDnsService.setExpiredIPEnabled(true);
+        sHttpDnsService.setHTTPSRequestEnabled(true);
         //pre resolve
         sHttpDnsService.setPreResolveHosts(new ArrayList<>(Arrays.asList("www.aliyun.com",
                 "www.taobao.com",
                 "s.vipkidstatic.com")));
-        sHttpDnsService.setExpiredIPEnabled(true);
+        sHttpDnsService.setLogEnabled(true);
+        sHttpDnsService.setPreResolveAfterNetworkChanged(true);
 
     }
 
