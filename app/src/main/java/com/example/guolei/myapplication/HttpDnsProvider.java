@@ -63,6 +63,9 @@ public class HttpDnsProvider {
 
     private static volatile boolean mHooked;
 
+    /**
+     * 不支持 9.0,下面用到的都是hide api
+     */
     public static void globalReplaceByHookOs() {
         if (mHooked) {
             return;
