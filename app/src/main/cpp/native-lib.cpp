@@ -32,12 +32,14 @@
  */
 #define MARK_UNSET 0u
 
-static int (*fp)(const char *hostname, const char *servname,
-                 const struct addrinfo *hints, unsigned netid, unsigned mark,
-                 struct addrinfo **res);
+static int (*fp_android_getaddrinfofornet)(const char *hostname, const char *servname,
+                                           const struct addrinfo *hints, unsigned netid,
+                                           unsigned mark,
+                                           struct addrinfo **res);
 
-static int (*fp_getaddrinfo)(const char *hostname, const char *servname,
-                             const struct addrinfo *hints, struct addrinfo **res);
+static int (*fp_android_getaddrinfoforiface)(const char *hostname, const char *servname,
+                                             const struct addrinfo *hints, const char *iface,
+                                             int mark, struct addrinfo **res);
 
 static JavaVM *sjavaVM;
 
@@ -90,33 +92,8 @@ static int new_android_getaddrinfofornet(const char *hostname, const char *servn
     LOGE("下面是hostname");
     LOGE(hostname, "");
     if (hints->ai_flags == AI_NUMERICHOST) {
-        if (fp) {
-            return fp(hostname, servname, hints, netid, mark, res);
-        }
-    } else {
-        const char *ip = getIpByHttpDns(hostname);
-        if (ip != NULL) {
-            LOGE("httpdns 解析成功，直接走IP");
-            LOGE("下面是ip");
-            LOGE(ip, "");
-            return fp(ip, servname, hints, netid, mark, res);
-        } else {
-            return fp(hostname, servname, hints, netid, mark, res);
-        }
-
-    }
-
-    return 0;
-}
-
-static int new_getaddrinfo(const char *hostname, const char *servname,
-                           const struct addrinfo *hints, struct addrinfo **res) {
-    LOGE("hahahha,wo hook dao l ->getaddrinfo ");
-    LOGE("下面是hostname");
-    LOGE(hostname, "");
-    if (hints->ai_flags == AI_NUMERICHOST) {
-        if (fp) {
-            return fp_getaddrinfo(hostname, servname, hints, res);
+        if (fp_android_getaddrinfofornet) {
+            return fp_android_getaddrinfofornet(hostname, servname, hints, netid, mark, res);
         }
     } else {
         const char *ip = getIpByHttpDns(hostname);
@@ -126,12 +103,42 @@ static int new_getaddrinfo(const char *hostname, const char *servname,
             LOGE(ip, "");
             //这里就比较神奇了，传的是IP，但是ai_flags 不是ip，但是还正常,查看源码的时候，没发现在这个代码里面判断
             // ai_flags 不numberhost还是其他
-            return fp_getaddrinfo(ip, servname, hints, res);
+            return fp_android_getaddrinfofornet(ip, servname, hints, netid, mark, res);
         } else {
-            return fp_getaddrinfo(hostname, servname, hints, res);
+            return fp_android_getaddrinfofornet(hostname, servname, hints, netid, mark, res);
         }
 
     }
+
+    return 0;
+}
+
+static int new_android_getaddrinfoforiface(const char *hostname, const char *servname,
+                                           const struct addrinfo *hints, const char *iface,
+                                           int mark,
+                                           struct addrinfo **res) {
+    LOGE("hahahha,wo hook dao l ->android_getaddrinforiface ");
+    LOGE("下面是hostname");
+    LOGE(hostname, "");
+    if (hints->ai_flags == AI_NUMERICHOST) {
+        if (fp_android_getaddrinfoforiface) {
+            return fp_android_getaddrinfoforiface(hostname, servname, hints, iface, mark, res);
+        }
+    } else {
+        const char *ip = getIpByHttpDns(hostname);
+        if (ip != NULL) {
+            LOGE("httpdns 解析成功，直接走IP");
+            LOGE("下面是ip");
+            LOGE(ip, "");
+            //这里就比较神奇了，传的是IP，但是ai_flags 不是ip，但是还正常,查看源码的时候，没发现在这个代码里面判断
+            // ai_flags 不numberhost还是其他
+            return fp_android_getaddrinfoforiface(ip, servname, hints, iface, mark, res);
+        } else {
+            return fp_android_getaddrinfoforiface(hostname, servname, hints, iface, mark, res);
+        }
+
+    }
+
     return 0;
 }
 
@@ -139,11 +146,32 @@ static int new_getaddrinfo(const char *hostname, const char *servname,
 //int android_getaddrinfoforiface(const char *hostname, const char *servname,
 //                           const struct addrinfo *hints, const char *iface, int mark, struct addrinfo **res)
 extern "C" int hook_android_getaddrinfofornet() {
-    if (fp) {
+    if (fp_android_getaddrinfofornet) {
         return 0;
     }
     int result = xhook_register(".*\\libjavacore.so$", "android_getaddrinfofornet",
-                   (void *) new_android_getaddrinfofornet, reinterpret_cast<void **>(&fp));
+                                (void *) new_android_getaddrinfofornet,
+                                reinterpret_cast<void **>(&fp_android_getaddrinfofornet));
+    xhook_refresh(1);
+#if DEBUG
+    xhook_enable_sigsegv_protection(0);
+    xhook_enable_debug(1);
+    LOGE("built type debug");
+#elif RELEASE
+    xhook_enable_sigsegv_protection(1);
+    xhook_enable_debug(0);
+    LOGE("built type release");
+#endif
+    return result;
+}
+
+extern "C" int hook_android_getaddrinfoforiface() {
+    if (fp_android_getaddrinfofornet) {
+        return 0;
+    }
+    int result = xhook_register(".*\\libjavacore.so$", "android_getaddrinfoforiface",
+                                (void *) new_android_getaddrinfoforiface,
+                                reinterpret_cast<void **>(&fp_android_getaddrinfoforiface));
     xhook_refresh(1);
 #if DEBUG
     xhook_enable_sigsegv_protection(0);
@@ -171,16 +199,26 @@ static int
 (*sys_getaddrinfo)(const char *__node, const char *__service, const struct addrinfo *__hints,
                    struct addrinfo **__result);
 
+jint hookForKitkat(JNIEnv *pEnv, jobject pJobject);
+
+jint hookForL(JNIEnv *env, jobject instance);
+
 static int my_getaddrinfo(const char *__node, const char *__service, const struct addrinfo *__hints,
                           struct addrinfo **__result) {
 
     // 这里有用xHook的时候，把所有的的android_getaddrinfofornet方法都替换为new_android_getaddrinfofornet,
     // 因此我们这里直接调用 new_android_getaddrinfofornet就行
-    return new_android_getaddrinfofornet(__node, __service, __hints, NETID_UNSET, MARK_UNSET,
-                                         __result);
+    if (fp_android_getaddrinfofornet != NULL) {
+        return new_android_getaddrinfofornet(__node, __service, __hints, NETID_UNSET, MARK_UNSET,
+                                             __result);
+    } else if (fp_android_getaddrinfoforiface != NULL) {
+        return new_android_getaddrinfoforiface(__node, __service, __hints, NULL, 0,
+                                               __result);
+    }
+    return EAI_FAIL;
 }
 
-static int JNICALL hook_dns(JNIEnv *, jobject) {
+static int JNICALL hooj_libc_getaddrinfo(JNIEnv *, jobject) {
     static bool hooked = false;
     int result = -1;
 
@@ -211,16 +249,38 @@ static int JNICALL hook_dns(JNIEnv *, jobject) {
     return result;
 }
 
+
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_example_guolei_myapplication_MainActivity_nativeInit(JNIEnv *env, jobject instance) {
+Java_com_example_guolei_myapplication_MainActivity_nativeInit(JNIEnv *env, jobject instance,
+                                                              jint version) {
     env->GetJavaVM(&sjavaVM);
     if (initMethod(env) == -1) {
         return -1;
     }
+    if (version >= 27) {
+        return -1;
+    }
+    if (version >= 21) {
+        return hookForL(env, instance);
+    } else if (version >= 19) {
+        return hookForKitkat(env, instance);
+    }
+    return -1;
+}
+
+jint hookForL(JNIEnv *env, jobject instance) {
     if (hook_android_getaddrinfofornet() != 0) {
         xhook_clear();
         return -1;
     }
-    return hook_dns(env, instance);
+    return hooj_libc_getaddrinfo(env, instance);
+}
+
+jint hookForKitkat(JNIEnv *env, jobject instance) {
+    if (hook_android_getaddrinfoforiface() != 0) {
+        xhook_clear();
+        return -1;
+    }
+    return hooj_libc_getaddrinfo(env, instance);
 }

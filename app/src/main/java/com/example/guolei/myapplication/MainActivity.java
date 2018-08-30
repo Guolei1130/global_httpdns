@@ -1,5 +1,6 @@
 package com.example.guolei.myapplication;
 
+import android.os.Build;
 import android.os.Process;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -39,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         HttpDnsProvider.init(this);
-        Log.e(TAG, "onCreate: " + "native hook result-->" + (nativeInit() == 0));
+        Log.e(TAG, "onCreate: " + "native hook result-->" + (nativeInit(Build.VERSION.SDK_INT) == 0));
         Button tv = (Button) findViewById(R.id.sample_text);
         tv.setText(stringFromJNI());
         tv.setOnClickListener(new View.OnClickListener() {
@@ -131,7 +132,7 @@ public class MainActivity extends AppCompatActivity {
      */
     public native String stringFromJNI();
 
-    public native int nativeInit();
+    public native int nativeInit(int version);
 
 
 }
