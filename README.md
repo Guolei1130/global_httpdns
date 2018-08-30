@@ -10,10 +10,11 @@
 
 动态代理Os接口
 
-缺陷：怕厂商瞎修改，改个名字什么的。无法兼容webview
+缺陷：怕厂商瞎修改，改个名字什么的。无法兼容webview、不兼容9.0，用了非公开API。
 
 ### 方案3
 
+与方案二类似，但是放在native层，兼容9.0
 用xHook，hook getaddrinfofornet(5.0以上)、getadrinfoforiface(4.4)
 
 缺点：怕厂商瞎改。webview不兼容
