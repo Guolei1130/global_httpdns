@@ -4,7 +4,7 @@ android {
     compileSdkVersion 28
     defaultConfig {
         applicationId "com.example.guolei.myapplication"
-        minSdkVersion 15
+        minSdkVersion 19
         targetSdkVersion 28
         versionCode 1
         versionName "1.0"
@@ -62,4 +62,5 @@ dependencies {
     implementation ('com.aliyun.ams:alicloud-android-httpdns:1.1.7@aar') {
         transitive true
     }
+    implementation 'com.github.Guolei1130:global_httpdns:v0.0.1'
 }
