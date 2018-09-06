@@ -13,6 +13,23 @@
   }
 ```
 
+#### 二次更新
+
+```
+	allprojects {
+		repositories {
+			...
+			maven { url 'https://jitpack.io' }
+		}
+	}
+	
+	dependencies {
+	        implementation 'com.github.Guolei1130:global_httpdns:v0.0.1'
+	}
+```
+
+瞬间切入java层DNS解析。在DNS解析之前切入自己的DNS解析，如HttpDns。舒服的一匹。代码量少到只有100行。
+
 ### 什么是HttpDns，为什么要接入HttpDns
 
 >HTTPDNS使用HTTP协议进行域名解析，代替现有基于UDP的DNS协议，域名解析请求直接发送到阿里云的HTTPDNS服务器，从而绕过运营商的Local DNS，能够避免Local DNS造成的域名劫持问题和调度不精准问题。
