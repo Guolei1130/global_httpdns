@@ -40,6 +40,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         Log.e(TAG, "onCreate: " + "native hook result-->" + (nativeInit(Build.VERSION.SDK_INT) == 0));
+//        HttpDnsProvider.globalReplaceByHookOs();
         Button tv = findViewById(R.id.sample_text);
         tv.setText(stringFromJNI());
         tv.setOnClickListener(new View.OnClickListener() {
