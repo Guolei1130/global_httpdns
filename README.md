@@ -233,9 +233,9 @@ extern "C" int hook_android_getaddrinfofornet() {
 
 ![](https://user-gold-cdn.xitu.io/2018/9/1/16593b8823139d56?w=1406&h=142&f=png&s=51762)
 
-哦？也是用的libc的。爱奇艺的xHook，是PCL/GOT表hook方案，而这个so，我们又加载不到我们的进程来，没办法，只能inline hook libc.so了。
+哦？也是用的libc的。爱奇艺的xHook，是PCL/GOT表hook方案，而这个so，我们又加载不到我们的进程来，没办法，只能考虑基于Android linker的dlopen、dlsys等 hook libc.so了，由于这个在7.0之上做了权限收缩。。
 
-### inline hook，webview也可以了。
+### 基于Android linker hook，webview也可以了。
 
 我们先看下相关的代码。
 
@@ -318,7 +318,7 @@ static int JNICALL hooj_libc_getaddrinfo(JNIEnv *, jobject) {
 
 当然，缺点也是相当比较明显的。
 
-1. 依赖inline hook，inline hook的方案是相对比较复杂、兼容性也比较差的，不敢保证Lody大神的AndHook绝对稳定可靠
+1. 基于Android linker 导出表形式hook，不敢保证Lody大神的AndHook绝对稳定可靠
 2. 鬼知道国内的厂商会不会随便修改函数名、so名
 
 
